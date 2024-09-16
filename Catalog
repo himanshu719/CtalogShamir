@@ -1,0 +1,84 @@
+package org.example;
+
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ShamirsSecretSharing {
+
+    // Function to convert a number from a given base to decimal
+    public static int convertToDecimal(String value, int base) {
+        int decimalValue = 0;
+        int power = 1;
+
+        for (int i = value.length() - 1; i >= 0; --i) {
+            char digit = value.charAt(i);
+            int digitValue = (digit >= '0' && digit <= '9') ? (digit - '0') : (digit - 'a' + 10);
+            decimalValue += digitValue * power;
+            power *= base;
+        }
+
+        return decimalValue;
+    }
+
+    // Function to calculate the constant term using Lagrange interpolation
+    public static int calculateConstantTerm(JSONObject data) {
+        List<double[]> coordinates = new ArrayList<>();
+
+        for (String key : data.keySet()) {
+            if (key.equals("keys")) continue; // Skip the "keys" object
+
+            JSONObject obj = data.getJSONObject(key);
+            if (obj.has("base") && obj.has("value")) {
+                int base = obj.getInt("base");
+                String value = obj.getString("value");
+                double decimalValue = convertToDecimal(value, base);
+                coordinates.add(new double[]{base, decimalValue});
+            }
+        }
+
+        int n = coordinates.size();
+        double c = 0; // The constant term
+
+        // Evaluate polynomial at x = 0 using Lagrange interpolation formula
+        for (int i = 0; i < n; ++i) {
+            double xi = coordinates.get(i)[0];
+            double yi = coordinates.get(i)[1];
+
+            double term = yi;
+
+            for (int j = 0; j < n; ++j) {
+                if (i != j) {
+                    term *= -coordinates.get(j)[0];
+                    term /= (xi - coordinates.get(j)[0]);
+                }
+            }
+
+            c += term;
+        }
+
+        return (int) Math.round(c); // Round the result to the nearest integer
+    }
+
+    public static void main(String[] args) {
+        try {
+            // Parse JSON
+            FileReader fileReader = new FileReader("org/example/filename.json");
+            JSONTokener tokener = new JSONTokener(fileReader);
+            JSONObject catalog = new JSONObject(tokener);
+
+            // Calculate the constant term
+            int constantTerm = calculateConstantTerm(catalog);
+
+            // Output the result
+            System.out.println("The constant term is: " + constantTerm);
+
+        } catch (IOException e) {
+            System.err.println("Error opening file: " + e.getMessage());
+        }
+    }
+}
